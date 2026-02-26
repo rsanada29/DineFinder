@@ -23,7 +23,9 @@ import { COLORS } from '../../src/constants/mockData';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const GOOGLE_CONFIGURED = Boolean(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
+const GOOGLE_CONFIGURED = Boolean(
+  process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID
+);
 
 // Google sign-in (needs its own component because of the hook)
 function GoogleSignInButton({ onError }: { onError: (msg: string) => void }) {
@@ -43,7 +45,7 @@ function GoogleSignInButton({ onError }: { onError: (msg: string) => void }) {
       onError('Google sign-in failed. Please try again.');
       setGoogleLoading(false);
     }
-  }, [response]);
+  }, [response, onError]);
 
   async function handleGoogleToken(idToken: string) {
     setGoogleLoading(true);

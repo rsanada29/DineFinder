@@ -16,27 +16,27 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.meshimatch.app",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "DineFinder uses your location to find nearby restaurants.",
-        "LSApplicationQueriesSchemes": ["mailto", "itms-apps"]
-      },
-      "googleServicesFile": "./GoogleService-Info.plist",
-      "config": {
-        "googleMapsApiKey": "$(GOOGLE_MAPS_API_KEY_IOS)"
+        "LSApplicationQueriesSchemes": [
+          "mailto",
+          "itms-apps"
+        ]
       }
     },
     "android": {
-      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FF6B35"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.meshimatch.app",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ],
       "config": {
         "googleMaps": {
@@ -77,6 +77,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9eac2713-dd3e-4367-8453-131737498553"
+      }
     }
   }
 }

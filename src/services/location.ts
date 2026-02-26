@@ -1,4 +1,5 @@
 import * as Location from 'expo-location';
+import { Alert, Linking, Platform } from 'react-native';
 
 export interface Coords {
   lat: number;
@@ -14,6 +15,20 @@ export async function getUserLocation(): Promise<Coords> {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
       console.warn('Location permission denied');
+      Alert.alert(
+        'Location Required',
+        'DineFinder needs your location to find nearby restaurants. Using default location instead.',
+        [
+          { text: 'OK', style: 'cancel' },
+          {
+            text: 'Open Settings',
+            onPress: () => {
+              if (Platform.OS === 'ios') Linking.openURL('app-settings:');
+              else Linking.openSettings();
+            },
+          },
+        ]
+      );
       return DEFAULT_COORDS;
     }
 

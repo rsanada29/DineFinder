@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "171651729430",
+    "project_id": "meshi-match-8476d",
+    "storage_bucket": "meshi-match-8476d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:171651729430:android:b03e1cc045d67043cf0d37",
+        "android_client_info": {
+          "package_name": "com.meshimatch.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "171651729430-km4r15j957j728lbpkf146tfdqmaggv7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhCzA50QniiwIpQ0AQ8qcIpMhLRwBqGRU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "171651729430-km4r15j957j728lbpkf146tfdqmaggv7.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "171651729430-r3lc1bjvv6o94hdnu4o7nv8e4ug0fjso.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.meshimatch.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

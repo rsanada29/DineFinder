@@ -103,11 +103,13 @@ export const useRestaurantStore = create<RestaurantState>()(
             const { userLat, userLng } = get();
             // Refresh up to 10 at a time to avoid excessive API calls
             const toRefresh = stale.slice(0, 10);
-            const refreshed = await Promise.all(
+            const results = await Promise.allSettled(
               toRefresh.map((r) => fetchPlaceById(r.id, userLat, userLng))
             );
             const refreshMap = new Map<string, Restaurant>();
-            refreshed.forEach((r) => { if (r) refreshMap.set(r.id, r); });
+            results.forEach((result) => {
+              if (result.status === 'fulfilled' && result.value) refreshMap.set(result.value.id, result.value);
+            });
 
             if (refreshMap.size > 0) {
               set((state) => {
@@ -202,7 +204,7 @@ export const useRestaurantStore = create<RestaurantState>()(
           saved.forEach((r) => { if (!r.fetchedAt) r.fetchedAt = undefined; });
           state.saved = saved;
         }
-        return state as RestaurantState;
+        return state as unknown as RestaurantState;
       },
       // Only persist saved restaurants and filter preferences
       // restaurants/skipped/loading state reset on each app launch

@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   Alert,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useGroupStore } from '../../src/store/useGroupStore';
@@ -249,9 +250,14 @@ export default function GroupsScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleJoin}
-                    style={[styles.formBtn, styles.createBtn]}
+                    style={[styles.formBtn, styles.createBtn, joinLoading && styles.disabledBtn]}
+                    disabled={joinLoading}
                   >
-                    <Text style={styles.createText}>Join</Text>
+                    {joinLoading ? (
+                      <ActivityIndicator color="white" size="small" />
+                    ) : (
+                      <Text style={styles.createText}>Join</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -393,6 +399,9 @@ const styles = StyleSheet.create({
   createBtn: {
     flex: 2,
     backgroundColor: COLORS.primary,
+  },
+  disabledBtn: {
+    opacity: 0.6,
   },
   createText: {
     fontSize: 14,

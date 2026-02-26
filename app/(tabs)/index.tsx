@@ -266,6 +266,9 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 14,
   },
+  emptyEmoji: {
+    fontSize: 48,
+  },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',

@@ -69,9 +69,13 @@ function AuthGate() {
       // Load user profile: try per-user AsyncStorage first, then Firestore
       AsyncStorage.getItem(`meshi-profile-${user.uid}`).then((local) => {
         if (local) {
-          const parsed = JSON.parse(local);
-          if (parsed.displayName) setDisplayName(parsed.displayName);
-          if (parsed.photoUri) setPhotoUri(parsed.photoUri);
+          try {
+            const parsed = JSON.parse(local);
+            if (parsed.displayName) setDisplayName(parsed.displayName);
+            if (parsed.photoUri) setPhotoUri(parsed.photoUri);
+          } catch {
+            // Corrupted data — ignore and let Firestore profile load below
+          }
         }
       }).catch(console.warn);
       getUserProfile(user.uid).then(async (profile) => {
