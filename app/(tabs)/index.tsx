@@ -7,7 +7,12 @@ import {
   ActivityIndicator,
   SafeAreaView,
   Image,
+  Dimensions,
 } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const isTablet = SCREEN_WIDTH >= 768;
+const DECK_MAX_WIDTH = isTablet ? 600 : 430;
 import { useRestaurantStore } from '../../src/store/useRestaurantStore';
 import { parseTimeRanges } from '../../src/utils/hours';
 import { useGroupStore } from '../../src/store/useGroupStore';
@@ -247,7 +252,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 8,
-    maxWidth: 430,
+    maxWidth: DECK_MAX_WIDTH,
     width: '100%',
     alignSelf: 'center',
   },
@@ -297,7 +302,7 @@ const styles = StyleSheet.create({
     gap: 32,
     paddingVertical: 16,
     paddingBottom: 12,
-    maxWidth: 430,
+    maxWidth: DECK_MAX_WIDTH,
     width: '100%',
     alignSelf: 'center',
   },
