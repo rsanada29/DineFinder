@@ -9,6 +9,9 @@ import {
   Linking,
   Alert,
   SafeAreaView,
+  TextInput,
+  Modal,
+  Pressable,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import Slider from '@react-native-community/slider';
@@ -154,7 +157,7 @@ export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const theme = useTheme();
-  const { groups, getGroupMatches, removeSwipe } = useGroupStore();
+  const { groups, getGroupMatches, removeSwipe, renameGroup } = useGroupStore();
   const currentUserId = useAuthStore((s) => s.user?.uid) ?? '';
   const myDisplayName = useUserStore((s) => s.displayName);
   const myPhotoUri = useUserStore((s) => s.photoUri);
@@ -172,6 +175,8 @@ export default function GroupDetailScreen() {
   const [matchMaxDistance, setMatchMaxDistance] = useState(20);
   const [matchPriceLevels, setMatchPriceLevels] = useState<number[]>([1, 2, 3, 4]);
   const [fetchedProfiles, setFetchedProfiles] = useState<Record<string, MemberProfile>>({});
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
 
   const group = groups.find((g) => g.id === id);
 
@@ -233,6 +238,23 @@ export default function GroupDetailScreen() {
     Alert.alert('Copied!', `${group.code} copied to clipboard`);
   };
 
+  const isCreator = group.createdBy === currentUserId;
+
+  const openRenameModal = () => {
+    setNewGroupName(group.name);
+    setShowRenameModal(true);
+  };
+
+  const handleRename = () => {
+    const trimmed = newGroupName.trim();
+    if (!trimmed) {
+      Alert.alert('Invalid Name', 'Group name cannot be empty.');
+      return;
+    }
+    renameGroup(group.id, trimmed);
+    setShowRenameModal(false);
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -241,7 +263,14 @@ export default function GroupDetailScreen() {
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
 
-        <Text style={[styles.groupName, { color: theme.text }]}>{group.name}</Text>
+        <View style={styles.groupNameRow}>
+          <Text style={[styles.groupName, { color: theme.text, flex: 1 }]}>{group.name}</Text>
+          {group.members.includes(currentUserId) && (
+            <TouchableOpacity onPress={openRenameModal} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={{ fontSize: 18 }}>✏️</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Code */}
         <View style={styles.codeRow}>
@@ -491,6 +520,39 @@ export default function GroupDetailScreen() {
         {/* Google attribution */}
         {matches.length > 0 && <PoweredByGoogle style={{ marginTop: 16 }} />}
       </ScrollView>
+
+      {/* Rename Group Modal */}
+      <Modal
+        visible={showRenameModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRenameModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowRenameModal(false)}>
+          <Pressable style={[styles.renameModal, { backgroundColor: theme.card }]} onPress={() => {}}>
+            <Text style={[styles.renameModalTitle, { color: theme.text }]}>Rename Group</Text>
+            <TextInput
+              value={newGroupName}
+              onChangeText={setNewGroupName}
+              style={[styles.renameInput, { color: theme.text, borderColor: theme.cardBorder, backgroundColor: theme.background }]}
+              placeholder="Group name"
+              placeholderTextColor={theme.subtext}
+              autoFocus
+              maxLength={40}
+              returnKeyType="done"
+              onSubmitEditing={handleRename}
+            />
+            <View style={styles.renameModalActions}>
+              <TouchableOpacity onPress={() => setShowRenameModal(false)} style={styles.renameCancel}>
+                <Text style={[styles.renameCancelText, { color: theme.subtext }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleRename} style={styles.renameSave}>
+                <Text style={styles.renameSaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -880,6 +942,65 @@ const styles = StyleSheet.create({
   },
   matchActionText: {
     fontSize: 12,
+    fontWeight: '700',
+  },
+  groupNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  renameModal: {
+    width: '100%',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  renameModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 16,
+  },
+  renameInput: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    marginBottom: 20,
+  },
+  renameModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  renameCancel: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  renameCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  renameSave: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  renameSaveText: {
+    color: 'white',
+    fontSize: 14,
     fontWeight: '700',
   },
 });

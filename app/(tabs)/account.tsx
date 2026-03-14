@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import { File as ExpoFile, Paths } from 'expo-file-system';
 import { useUserStore } from '../../src/store/useUserStore';
 import { useRestaurantStore } from '../../src/store/useRestaurantStore';
 import { useGroupStore } from '../../src/store/useGroupStore';
@@ -89,6 +90,18 @@ export default function AccountScreen() {
   const [contactMessage, setContactMessage] = useState('');
   const [legalType, setLegalType] = useState<'terms' | 'privacy' | null>(null);
 
+  const savePhoto = (uri: string) => {
+    setPhotoUri(uri);
+    if (authUser?.uid) {
+      updateUserProfile(authUser.uid, { photoUri: uri }).catch(console.warn);
+      AsyncStorage.setItem(`meshi-profile-${authUser.uid}`, JSON.stringify({
+        displayName: displayName || 'User',
+        photoUri: uri,
+      })).catch(console.warn);
+      updateMemberProfileInGroups({ name: displayName || 'User', photoUri: uri });
+    }
+  };
+
   const pickPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -102,18 +115,25 @@ export default function AccountScreen() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
-      setPhotoUri(uri);
-      // Save to Firestore so it persists across logout/login
-      if (authUser?.uid) {
-        updateUserProfile(authUser.uid, { photoUri: uri }).catch(console.warn);
-        // Cache locally
-        AsyncStorage.setItem(`meshi-profile-${authUser.uid}`, JSON.stringify({
-          displayName: displayName || 'User',
-          photoUri: uri,
-        })).catch(console.warn);
-        // Update photo in all groups
-        updateMemberProfileInGroups({ name: displayName || 'User', photoUri: uri });
+      const tempUri = result.assets[0].uri;
+
+      // Copy to permanent app storage so the file survives app restarts
+      const fileName = `profile-photo-${Date.now()}.jpg`;
+      try {
+        const tempFile = new ExpoFile(tempUri);
+        const dest = new ExpoFile(Paths.document, fileName);
+        tempFile.copy(dest);
+        // Delete old permanent photo to avoid storage bloat
+        if (photoUri) {
+          try {
+            const oldFile = new ExpoFile(photoUri);
+            if (oldFile.exists) oldFile.delete();
+          } catch { /* ignore */ }
+        }
+        savePhoto(dest.uri);
+      } catch (e) {
+        console.warn('Failed to copy profile photo to permanent storage:', e);
+        savePhoto(tempUri);
       }
     }
   };
@@ -144,7 +164,7 @@ export default function AccountScreen() {
 
   const handleRateApp = async () => {
     const url = Platform.OS === 'ios'
-      ? 'itms-apps://itunes.apple.com/app/id'
+      ? 'itms-apps://itunes.apple.com/app/id6759711355?action=write-review'
       : 'market://details?id=com.meshimatch.app';
     try {
       await Linking.openURL(url);

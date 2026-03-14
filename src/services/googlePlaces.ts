@@ -1,5 +1,17 @@
 import type { Restaurant, ReviewText } from '../types';
 import { MOCK_RESTAURANTS } from '../constants/mockData';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const CACHE_TTL_MS = 3 * 60 * 60 * 1000; // 3 hours
+
+interface NearbyCache {
+  restaurants: Restaurant[];
+  timestamp: number;
+}
+
+function getCacheKey(lat: number, lng: number, radius: number): string {
+  return `meshi-cache-${lat.toFixed(2)}:${lng.toFixed(2)}:${radius}`;
+}
 
 const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
 const BASE_URL = 'https://places.googleapis.com/v1';
@@ -378,13 +390,34 @@ export async function fetchPlaceById(
 export async function fetchNearbyRestaurants(
   lat: number,
   lng: number,
-  radiusMeters = 3000
+  radiusMeters = 3000,
+  forceRefresh = false
 ): Promise<Restaurant[]> {
   if (!API_KEY) {
     return MOCK_RESTAURANTS.map((r) => ({
       ...r,
       distance: calculateDistance(lat, lng, r.lat, r.lng),
     }));
+  }
+
+  // Check cache
+  const cacheKey = getCacheKey(lat, lng, radiusMeters);
+  if (!forceRefresh) {
+    try {
+      const raw = await AsyncStorage.getItem(cacheKey);
+      if (raw) {
+        const cached: NearbyCache = JSON.parse(raw);
+        if (Date.now() - cached.timestamp < CACHE_TTL_MS) {
+          console.log(`[MeshiMatch] Using cached data (${cached.restaurants.length} restaurants)`);
+          // Recalculate distances from current position
+          return cached.restaurants
+            .map((r) => ({ ...r, distance: calculateDistance(lat, lng, r.lat, r.lng) }))
+            .sort((a, b) => a.distance - b.distance);
+        }
+      }
+    } catch {
+      // Cache read failed — proceed with API call
+    }
   }
 
   try {
@@ -482,7 +515,13 @@ export async function fetchNearbyRestaurants(
     console.log(`[MeshiMatch] Final: ${results.length} restaurants`, genreCounts);
 
     // Sort by distance — closest first
-    return results.sort((a, b) => a.distance - b.distance);
+    const sorted = results.sort((a, b) => a.distance - b.distance);
+
+    // Save to cache
+    const cache: NearbyCache = { restaurants: sorted, timestamp: Date.now() };
+    AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(console.warn);
+
+    return sorted;
   } catch (err) {
     console.warn('fetchNearbyRestaurants failed, falling back to mock data:', err);
     return MOCK_RESTAURANTS.map((r) => ({

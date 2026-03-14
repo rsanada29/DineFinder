@@ -6,6 +6,7 @@ import { fetchNearbyRestaurants, fetchPlaceById } from '../services/googlePlaces
 import { getUserLocation } from '../services/location';
 import { saveUserSavedRestaurants, loadUserSavedRestaurants } from '../services/auth';
 import { useAuthStore } from './useAuthStore';
+import { logEvent } from '../services/analytics';
 
 const DEFAULT_RADIUS = 20000;
 const MAX_RADIUS = 50000;
@@ -69,7 +70,7 @@ export const useRestaurantStore = create<RestaurantState>()(
         const newRadius = Math.min(Math.round(searchRadius * 1.5), MAX_RADIUS);
         set({ isLoading: true, skipped: [], searchRadius: newRadius });
         try {
-          const data = await fetchNearbyRestaurants(userLat, userLng, newRadius);
+          const data = await fetchNearbyRestaurants(userLat, userLng, newRadius, true);
           set({ restaurants: data });
         } finally {
           set({ isLoading: false });
@@ -140,6 +141,7 @@ export const useRestaurantStore = create<RestaurantState>()(
             AsyncStorage.setItem(`meshi-saved-${uid}`, JSON.stringify(newSaved)).catch(console.warn);
             saveUserSavedRestaurants(uid, newSaved).catch(console.warn);
           }
+          logEvent('swipe_right', { restaurant_id: restaurant.id, restaurant_name: restaurant.name });
           return { saved: newSaved };
         });
       },
@@ -148,6 +150,7 @@ export const useRestaurantStore = create<RestaurantState>()(
         set((state) => ({
           skipped: [...state.skipped, restaurantId],
         }));
+        logEvent('swipe_left', { restaurant_id: restaurantId });
       },
 
       removeSaved: (restaurantId) => {
@@ -163,7 +166,15 @@ export const useRestaurantStore = create<RestaurantState>()(
         });
       },
 
-      setFilters: (filters) => set({ filters }),
+      setFilters: (filters) => {
+        set({ filters });
+        logEvent('filter_changed', {
+          max_distance: filters.maxDistance,
+          genres: filters.genres.join(','),
+          sort: filters.sort,
+          meal_time: filters.mealTime,
+        });
+      },
 
       logout: () => {
         // Save current user's data to their own AsyncStorage before clearing

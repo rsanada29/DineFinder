@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Group, Restaurant } from '../types';
 import { db, isFirebaseConfigured } from '../services/firebase';
 import { useAuthStore } from './useAuthStore';
+import { logEvent } from '../services/analytics';
 
 function getCurrentUserId(): string {
   return useAuthStore.getState().user?.uid ?? 'user_demo';
@@ -95,6 +96,12 @@ async function firestoreDeleteGroup(groupId: string): Promise<void> {
   await deleteDoc(doc(db, 'groups', groupId));
 }
 
+async function firestoreUpdateGroupName(groupId: string, name: string): Promise<void> {
+  if (!db) return;
+  const { doc, updateDoc } = await import('firebase/firestore');
+  await updateDoc(doc(db, 'groups', groupId), { name });
+}
+
 async function firestoreUpdateMemberProfile(
   groupId: string,
   userId: string,
@@ -137,6 +144,7 @@ interface GroupState {
   joinGroup: (code: string) => Promise<Group | null>;
   leaveGroup: (groupId: string) => void;
   deleteGroup: (groupId: string) => void;
+  renameGroup: (groupId: string, newName: string) => void;
   addSwipe: (groupId: string, restaurantId: string) => void;
   removeSwipe: (groupId: string, restaurantId: string) => void;
   getGroupMatches: (groupId: string, allRestaurants: Restaurant[]) => Restaurant[];
@@ -169,6 +177,7 @@ export const useGroupStore = create<GroupState>()(
         };
         set((state) => ({ groups: [...state.groups, newGroup] }));
         if (isFirebaseConfigured) firestoreCreateGroup(newGroup).catch(console.warn);
+        logEvent('group_created', { group_id: newGroup.id, group_name: name, member_count: 1 });
         return newGroup;
       },
 
@@ -195,6 +204,17 @@ export const useGroupStore = create<GroupState>()(
         get().leaveGroup(groupId);
       },
 
+      renameGroup: (groupId: string, newName: string) => {
+        set((state) => ({
+          groups: state.groups.map((g) =>
+            g.id === groupId ? { ...g, name: newName } : g
+          ),
+        }));
+        if (isFirebaseConfigured) {
+          firestoreUpdateGroupName(groupId, newName).catch(console.warn);
+        }
+      },
+
       joinGroup: async (code: string) => {
         const userId = getCurrentUserId();
         const profile = getCurrentUserProfile();
@@ -217,6 +237,7 @@ export const useGroupStore = create<GroupState>()(
             firestoreJoinGroup(localGroup.id, userId, savedIds).catch(console.warn);
             firestoreUpdateMemberProfile(localGroup.id, userId, profile).catch(console.warn);
           }
+          logEvent('group_joined', { group_id: localGroup.id, member_count: updated.members.length });
           return updated;
         }
 
@@ -246,6 +267,7 @@ export const useGroupStore = create<GroupState>()(
         set((state) => ({ groups: [...state.groups, joined] }));
         firestoreJoinGroup(joined.id, userId, savedIds).catch(console.warn);
         firestoreUpdateMemberProfile(joined.id, userId, profile).catch(console.warn);
+        logEvent('group_joined', { group_id: joined.id, member_count: joined.members.length });
         return joined;
       },
 
@@ -292,7 +314,11 @@ export const useGroupStore = create<GroupState>()(
       getGroupMatches: (groupId: string, allRestaurants: Restaurant[]) => {
         const group = get().groups.find((g) => g.id === groupId);
         if (!group) return [];
-        return computeMatches(group, allRestaurants);
+        const matches = computeMatches(group, allRestaurants);
+        if (matches.length > 0) {
+          logEvent('match_found', { group_id: groupId, match_count: matches.length });
+        }
+        return matches;
       },
 
       subscribeToGroup: (groupId: string) => {
